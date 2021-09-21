@@ -1,5 +1,6 @@
 #define M5STACK_MPU6886
 #include <M5Stack.h>
+
 #include <TinyGPSPlus.h>
 TinyGPSPlus gps;
 
@@ -13,8 +14,7 @@ static LGFX_Sprite altimeter(&horizon);
 static LGFX_Sprite pointer(&horizon);
 static LGFX_Sprite variometer(&horizon);
 static LGFX_Sprite heading(&horizon);
-
-#define DEBUG
+static LGFX_Sprite gspeed(&horizon);
 
 #define XORG 160
 #define YORG 120
@@ -26,19 +26,17 @@ static LGFX_Sprite heading(&horizon);
 #define PNEEDLE 3
 #define PWHITE 255
 
-uint8_t select;
+uint8_t displayOption;
+uint8_t debugOption;
+uint16_t gpsCount;
+
 float pitch, pitch0;
 float roll, roll0;
 float yaw, yaw0;
 float Sin, Cos, Psin;
 
-#ifdef DEBUG
-float altitude = 259;
-#else
 float altitude;
-#endif
 float climbRate;
-uint16_t gpsCount;
 
 void Imu()
 {
@@ -73,14 +71,16 @@ void Gps()
   while(Serial2.available() > 0)
     gps.encode(Serial2.read());
 
-#ifdef DEBUG
-  altitude += 0.01;
-#else
-  if(gps.altitude.isValid()){
-    altitude = gps.altitude.meters();
-    gpsCount++;
+  if(debugOption == 1){
+    altitude += 0.01;
   }
-#endif
+  else{
+    if(gps.altitude.isValid()){
+      altitude = gps.altitude.meters();
+      gpsCount++;
+    }
+  }
+
   if(altitude > 999.0)
     altitude = 999.0;
   else if(altitude < -10)
@@ -126,12 +126,14 @@ void rotate(int *X, int *Y, int x, int y)
 void Btn()
 {
   M5.update();
-  if(M5.BtnC.wasPressed() || M5.BtnC.pressedFor(500)){
+  if(M5.BtnC.wasPressed()){
     IMUReset();
   }
-  else if(M5.BtnB.wasPressed() || M5.BtnB.pressedFor(500)){
+  else if(M5.BtnB.wasPressed()){
+    ++debugOption %= 2;
   }
   else if(M5.BtnA.wasPressed()){
+    ++displayOption %= 2;
   }
 }
 
@@ -213,7 +215,7 @@ void draw_Char(int x0, int y0, uint8_t c[])
   }
 }
 
-void draw_L(int y, int len)
+void draw_Line(int y, int len)
 {
   int x = - len / 2;
   int p = PITCH * Psin;
@@ -243,51 +245,51 @@ void draw_L(int y, int len)
 
 void draw_Pitch()
 {
-  draw_L(-PY6, PL2);
+  draw_Line(        -PY6, PL2);
   draw_Char( PX1  ,  PY6-6, Three);
   draw_Char( PX2  ,  PY6-6, Zero);
   draw_Char(-PX2-8,  PY6-6, Three);
   draw_Char(-PX1-8,  PY6-6, Zero);
-  draw_L(-PY5, PL1);
+  draw_Line(        -PY5, PL1);
 
-  draw_L( -PY4, PL2);
+  draw_Line(        -PY4, PL2);
   draw_Char( PX1,    PY4-6, Two);
   draw_Char( PX2,    PY4-6, Zero);
   draw_Char(-PX2-8,  PY4-6, Two);
   draw_Char(-PX1-8,  PY4-6, Zero);
-  draw_L( -PY3, PL1);
+  draw_Line(        -PY3, PL1);
 
-  draw_L( -PY2, PL2);
+  draw_Line(        -PY2, PL2);
   draw_Char( PX1,    PY2-6, One);
   draw_Char( PX2,    PY2-6, Zero);
   draw_Char(-PX2-8,  PY2-6, One);
   draw_Char(-PX1-8,  PY2-6, Zero);
-  draw_L( -PY1, PL1);
+  draw_Line(        -PY1, PL1);
 
-  draw_L(    0, PL2);
+  draw_Line(    0, PL2);
   draw_Char( PX1,    PY0-6, Zero);
   draw_Char(-PX1-8,  PY0-6, Zero);
 
-  draw_L(  PY1, PL1);
+  draw_Line(         PY1, PL1);
   draw_Char( PX1,   -PY2-6, One);
   draw_Char( PX2,   -PY2-6, Zero);
   draw_Char(-PX2-8, -PY2-6, One);
   draw_Char(-PX1-8, -PY2-6, Zero);
-  draw_L(  PY2, PL2);
+  draw_Line(         PY2, PL2);
 
-  draw_L(  PY3, PL1);
+  draw_Line(         PY3, PL1);
   draw_Char( PX1,   -PY4-6, Two);
   draw_Char( PX2,   -PY4-6, Zero);
   draw_Char(-PX2-8, -PY4-6, Two);
   draw_Char(-PX1-8, -PY4-6, Zero);
-  draw_L(  PY4, PL2);
+  draw_Line(         PY4, PL2);
 
-  draw_L( PY5, PL1);
+  draw_Line(         PY5, PL1);
   draw_Char( PX1,   -PY6-6, Three);
   draw_Char( PX2,   -PY6-6, Zero);
   draw_Char(-PX2-8, -PY6-6, Three);
   draw_Char(-PX1-8, -PY6-6, Zero);
-  draw_L( PY6, PL2);
+  draw_Line(         PY6, PL2);
 }
 
 #define RADIUS 120
@@ -398,12 +400,12 @@ void draw_BackPlate()
   rotate(&X1, &Y1, x1, y1);
   rotate(&X2, &Y2, x2, y2);
   horizon.fillTriangle(X0+XORG, Y0+P+YORG, X1+XORG, Y1+P+YORG, X2+XORG, Y2+P+YORG, PSKY);
-#ifdef DEBUG
-  horizon.setTextSize(2);
-  horizon.setTextColor(PWHITE);
-  horizon.setCursor(40, 220); horizon.printf("%4.1f", roll);
-  horizon.setCursor(230, 220); horizon.printf("%4.1f", pitch);
-#endif
+  if(debugOption == 1){
+    horizon.setTextSize(2);
+    horizon.setTextColor(PWHITE);
+    horizon.setCursor(40, 220); horizon.printf("%4.1f", roll);
+    horizon.setCursor(230, 220); horizon.printf("%4.1f", pitch);
+  }
 }
 
 void draw_Altimeter()
@@ -468,9 +470,8 @@ void draw_Pointer()
   pointer.drawChar(buf[2][2], 42, 8     + digit);
   pointer.drawChar(buf[1][2], 42, 8 +16 + digit);
   pointer.drawChar(buf[0][2], 42, 8 +32 + digit);
-#ifdef DEBUG
-  horizon.drawChar(buf[1][3], 250, 160);
-#endif
+  if(debugOption == 1)
+    horizon.drawChar(buf[1][3], 250, 160);
   pointer.drawLine( 0,  0, 58,  0, PWHITE);
   pointer.drawLine(58,  0, 58, 10, PWHITE);
   pointer.drawLine(58, 10, 68, 15, PWHITE);
@@ -504,7 +505,22 @@ void draw_Variometer()
 
 void draw_Heading()
 {
-  heading.drawRect(0, 0, 140, 30-2, PWHITE);
+  heading.fillRect(0, 0, 70, 30-2, PBLACK);
+  heading.drawRect(0, 0, 70, 30-2, PWHITE);
+  heading.setTextSize(3);
+  heading.setCursor(2, 3);
+//  heading.printf("%03d", (int)gps.course.deg());
+  heading.printf("%03d", 59);
+}
+
+void draw_Gspeed()
+{
+  gspeed.fillRect(0, 0, 70, 30-2, PBLACK);
+  gspeed.drawRect(0, 0, 70, 30-2, PWHITE);
+  gspeed.setTextSize(3);
+  gspeed.setCursor(2, 3);
+//  gspeed.printf("%dkm", (int)gps.speed.kmph());
+  gspeed.printf("%dkm", 89);
 }
 
 void Draw()
@@ -518,11 +534,15 @@ void Draw()
   draw_Pointer();
   draw_Variometer();
   draw_Heading();
+  draw_Gspeed();
 
   altimeter.pushSprite(280, 0);
   pointer.pushSprite(249, 105);
   variometer.pushSprite(0, 0);
-  heading.pushSprite(90, 210);
+  if(displayOption == 0){
+    heading.pushSprite(90, 210);
+    gspeed.pushSprite(170, 210);
+  }
 
   horizon.pushSprite(0, 0);
 }
@@ -574,7 +594,11 @@ void setup(void)
 
   heading.setColorDepth(8);
   heading.createPalette();
-  heading.createSprite(320-90-90, 30);
+  heading.createSprite(70, 30);
+
+  gspeed.setColorDepth(8);
+  gspeed.createPalette();
+  gspeed.createSprite(70, 30);
 }
 
 void loop(void)
@@ -583,7 +607,6 @@ void loop(void)
   Imu();
   Btn();
   Draw();
-#ifdef DEBUG
-  gpsMonitor();  
-#endif
+  if(debugOption == 1)
+    gpsMonitor();  
 }
