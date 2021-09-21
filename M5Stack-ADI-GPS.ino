@@ -28,7 +28,8 @@ static LGFX_Sprite gspeed(&horizon);
 
 uint8_t displayOption;
 uint8_t debugOption;
-uint16_t gpsCount;
+uint16_t gpsValidCount;
+uint16_t fps;
 
 float pitch, pitch0;
 float roll, roll0;
@@ -72,12 +73,12 @@ void Gps()
     gps.encode(Serial2.read());
 
   if(debugOption == 1){
-    altitude += 0.01;
+    altitude += 0.1;
   }
   else{
     if(gps.altitude.isValid()){
       altitude = gps.altitude.meters();
-      gpsCount++;
+      gpsValidCount++;
     }
   }
 
@@ -87,7 +88,7 @@ void Gps()
     altitude = -10.0;
 
   if(millis() - start > 1000){
-    climbRate = altitude - prevAltitude;
+    climbRate = (climbRate*4 + altitude - prevAltitude) / 5;
     prevAltitude = altitude;
     start = millis();
   }
@@ -95,8 +96,6 @@ void Gps()
 
 void gpsMonitor()
 {
-  static int count;
-
   lcd.setTextSize(2);
   lcd.setCursor(50, 140);
   if (gps.time.isValid())
@@ -104,7 +103,6 @@ void gpsMonitor()
     lcd.printf("%02d:", gps.time.hour());
     lcd.printf("%02d:", gps.time.minute());
     lcd.printf("%02d", gps.time.second());
-    count++;
   }
   else
   {
@@ -112,9 +110,9 @@ void gpsMonitor()
   }
 
   lcd.setCursor(50, 160);
-  lcd.printf("%d", gpsCount);
+  lcd.printf("%d", gpsValidCount);
   lcd.setCursor(50, 180);
-  lcd.printf("%d", count++);
+  lcd.printf("fps:%d", fps);
 }
 
 void rotate(int *X, int *Y, int x, int y)
@@ -403,8 +401,8 @@ void draw_BackPlate()
   if(debugOption == 1){
     horizon.setTextSize(2);
     horizon.setTextColor(PWHITE);
-    horizon.setCursor(40, 220); horizon.printf("%4.1f", roll);
-    horizon.setCursor(230, 220); horizon.printf("%4.1f", pitch);
+    horizon.setCursor(41, 5); horizon.printf("%4.1f", roll);
+    horizon.setCursor(215, 5); horizon.printf("%4.1f", pitch);
   }
 }
 
@@ -470,8 +468,8 @@ void draw_Pointer()
   pointer.drawChar(buf[2][2], 42, 8     + digit);
   pointer.drawChar(buf[1][2], 42, 8 +16 + digit);
   pointer.drawChar(buf[0][2], 42, 8 +32 + digit);
-  if(debugOption == 1)
-    horizon.drawChar(buf[1][3], 250, 160);
+//  if(debugOption == 1)
+//    horizon.drawChar(buf[1][3], 250, 160);
   pointer.drawLine( 0,  0, 58,  0, PWHITE);
   pointer.drawLine(58,  0, 58, 10, PWHITE);
   pointer.drawLine(58, 10, 68, 15, PWHITE);
@@ -505,25 +503,31 @@ void draw_Variometer()
 
 void draw_Heading()
 {
-  heading.fillRect(0, 0, 70, 30-2, PBLACK);
-  heading.drawRect(0, 0, 70, 30-2, PWHITE);
+  heading.fillRect(0, 0, 70, 30, PBLACK);
+  heading.drawRect(0, 0, 70, 30, PWHITE);
   heading.setTextSize(3);
-  heading.setCursor(2, 3);
-//  heading.printf("%03d", (int)gps.course.deg());
-  heading.printf("%03d", 59);
+  heading.setCursor(5, 3);
+  if(debugOption == 1)
+    heading.printf("%03d", 59);
+  else
+    heading.printf("%03d", (int)gps.course.deg());
+  heading.drawRect(60, 6, 6, 4, PWHITE);
+  heading.drawRect(61, 5, 4, 6, PWHITE);
 }
 
 void draw_Gspeed()
 {
-  gspeed.fillRect(0, 0, 70, 30-2, PBLACK);
-  gspeed.drawRect(0, 0, 70, 30-2, PWHITE);
+  gspeed.fillRect(0, 0, 95, 30, PBLACK);
+  gspeed.drawRect(0, 0, 95, 30, PWHITE);
   gspeed.setTextSize(3);
-  gspeed.setCursor(2, 3);
-//  gspeed.printf("%dkm", (int)gps.speed.kmph());
-  gspeed.printf("%dkm", 89);
+  gspeed.setCursor(3, 3);
+  if(debugOption == 1)
+    gspeed.printf("%3dkm", 118);
+  else
+    gspeed.printf("%3dkm", (int)gps.speed.kmph());
 }
 
-void Draw()
+void Draw_All()
 {
   draw_BackPlate();
   draw_Pitch();
@@ -536,12 +540,12 @@ void Draw()
   draw_Heading();
   draw_Gspeed();
 
-  altimeter.pushSprite(280, 0);
-  pointer.pushSprite(249, 105);
-  variometer.pushSprite(0, 0);
+  heading.pushSprite(70, 209);
+  gspeed.pushSprite(160, 209);
   if(displayOption == 0){
-    heading.pushSprite(90, 210);
-    gspeed.pushSprite(170, 210);
+    altimeter.pushSprite(280, 0);
+    pointer.pushSprite(249, 105);
+    variometer.pushSprite(0, 0);
   }
 
   horizon.pushSprite(0, 0);
@@ -598,15 +602,24 @@ void setup(void)
 
   gspeed.setColorDepth(8);
   gspeed.createPalette();
-  gspeed.createSprite(70, 30);
+  gspeed.createSprite(95, 30);
 }
 
 void loop(void)
 {
+  static int start, count;
+
   Gps();
   Imu();
   Btn();
-  Draw();
+  Draw_All();
   if(debugOption == 1)
-    gpsMonitor();  
+    gpsMonitor();
+  if(millis() - start > 1000){
+    fps = count;
+    count = 0;
+    start = millis();
+  }
+  else
+    count++;
 }
