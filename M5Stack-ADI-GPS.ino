@@ -14,7 +14,7 @@ static LGFX_Sprite pointer(&horizon);
 static LGFX_Sprite variometer(&horizon);
 static LGFX_Sprite heading(&horizon);
 
-//#define DEBUG
+#define DEBUG
 
 #define XORG 160
 #define YORG 120
@@ -46,7 +46,7 @@ void Imu()
 
   M5.IMU.getAhrsData(&r, &p, &y);
   
-  pitch = (pitch * 4 + p - pitch0) / 5;
+  pitch = (pitch * 4 + p - pitch0) / 5;   // moving average
   roll  = (roll  * 4 + r -  roll0) / 5;
   yaw   = y - yaw0;
 
@@ -74,7 +74,7 @@ void Gps()
     gps.encode(Serial2.read());
 
 #ifdef DEBUG
-  altitude -= 0.01;
+  altitude += 0.01;
 #else
   if(gps.altitude.isValid()){
     altitude = gps.altitude.meters();
@@ -287,35 +287,37 @@ void draw_Pitch()
   draw_L( PY6, PL2);
 }
 
+#define RADIUS 120
+
 void draw_Roll()
 {
-  int t;
+  float angle;
   int x, y, X0, Y0, X1, Y1, X2, Y2;
 
-  for(t = -180*2; t <= 0; t += 1)
+  for(angle = -180; angle <= 0; angle += 0.5)
   {
-    x = 115 * cos(PI * (float)t/2 / 180);
-    y = 115 * sin(PI * (float)t/2 / 180);
+    x = (RADIUS-5) * cos(PI * angle / 180);
+    y = (RADIUS-5) * sin(PI * angle / 180);
     rotate(&X0, &Y0, x, y);
     horizon.drawPixel(X0+XORG, Y0+YORG, PWHITE);
-    switch(t)
+    switch((int)(angle*2))
     {
       case -70*2:
       case -80*2:
       case -100*2:
       case -110*2:
-        x = 105 * cos(PI * (float)t/2 / 180);
-        y = 105 * sin(PI * (float)t/2 / 180);
+        x = (RADIUS-15) * cos(PI * angle / 180);
+        y = (RADIUS-15) * sin(PI * angle / 180);
         rotate(&X1, &Y1, x, y);
         horizon.drawLine(X0+XORG, Y0+YORG, X1+XORG, Y1+YORG, PWHITE);
         break;
       case -45*2:
       case -135*2:
-        x = 125 * cos(PI * ((float)t/2-2) / 180);
-        y = 125 * sin(PI * ((float)t/2-2) / 180);
+        x = (RADIUS+5) * cos(PI * (angle-2) / 180);
+        y = (RADIUS+5) * sin(PI * (angle-2) / 180);
         rotate(&X1, &Y1, x, y);
-        x = 125 * cos(PI * ((float)t/2+2) / 180);
-        y = 125 * sin(PI * ((float)t/2+2) / 180);
+        x = (RADIUS+5) * cos(PI * (angle+2) / 180);
+        y = (RADIUS+5) * sin(PI * (angle+2) / 180);
         rotate(&X2, &Y2, x, y);
         horizon.fillTriangle(X0+XORG, Y0+YORG, X1+XORG, Y1+YORG, X2+XORG, Y2+YORG, PWHITE);
       case  1*2: case 1*2-1: case 0*2: case 0*2-1: case -1*2:
@@ -325,8 +327,8 @@ void draw_Roll()
       case -119*2: case -119*2-1: case -120*2: case -120*2-1: case -121*2:
       case -149*2: case -149*2-1: case -150*2: case -150*2-1: case -151*2:
       case -179*2: case -179*2-1: case -180*2: case -180*2-1: case -181*2:
-        x = 105 * cos(PI * (float)t/2 / 180);
-        y = 105 * sin(PI * (float)t/2 / 180);
+        x = (RADIUS-15) * cos(PI * angle / 180);
+        y = (RADIUS-15) * sin(PI * angle / 180);
         rotate(&X1, &Y1, x, y);
         horizon.drawLine(X0+XORG, Y0+YORG, X1+XORG, Y1+YORG, PWHITE);
         break;
