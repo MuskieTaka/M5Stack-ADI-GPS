@@ -230,6 +230,7 @@ void draw_L(int y, int len)
 #define PX1 32
 #define PX2 42
 
+#define PY0 0
 #define PY1 20
 #define PY2 40
 #define PY3 60
@@ -263,7 +264,9 @@ void draw_Pitch()
   draw_Char(-PX1-8,  PY2-6, Zero);
   draw_L( -PY1, PL1);
 
-  draw_L(   0, PL2);
+  draw_L(    0, PL2);
+  draw_Char( PX1,    PY0-6, Zero);
+  draw_Char(-PX1-8,  PY0-6, Zero);
 
   draw_L(  PY1, PL1);
   draw_Char( PX1,   -PY2-6, One);
@@ -289,51 +292,74 @@ void draw_Pitch()
 
 #define RADIUS 120
 
-void draw_Roll()
+void draw_Mark1(int angle)
 {
-  float angle;
   int x, y, X0, Y0, X1, Y1, X2, Y2;
 
-  for(angle = -180; angle <= 0; angle += 0.5)
-  {
-    x = (RADIUS-5) * cos(PI * angle / 180);
-    y = (RADIUS-5) * sin(PI * angle / 180);
-    rotate(&X0, &Y0, x, y);
-    horizon.drawPixel(X0+XORG, Y0+YORG, PWHITE);
-    switch((int)(angle*2))
-    {
-      case -70*2:
-      case -80*2:
-      case -100*2:
-      case -110*2:
-        x = (RADIUS-15) * cos(PI * angle / 180);
-        y = (RADIUS-15) * sin(PI * angle / 180);
-        rotate(&X1, &Y1, x, y);
-        horizon.drawLine(X0+XORG, Y0+YORG, X1+XORG, Y1+YORG, PWHITE);
-        break;
-      case -45*2:
-      case -135*2:
-        x = (RADIUS+5) * cos(PI * (angle-2) / 180);
-        y = (RADIUS+5) * sin(PI * (angle-2) / 180);
-        rotate(&X1, &Y1, x, y);
-        x = (RADIUS+5) * cos(PI * (angle+2) / 180);
-        y = (RADIUS+5) * sin(PI * (angle+2) / 180);
-        rotate(&X2, &Y2, x, y);
-        horizon.fillTriangle(X0+XORG, Y0+YORG, X1+XORG, Y1+YORG, X2+XORG, Y2+YORG, PWHITE);
-      case  1*2: case 1*2-1: case 0*2: case 0*2-1: case -1*2:
-      case -29*2: case -29*2-1: case -30*2: case -30*2-1: case -31*2:
-      case -59*2: case -59*2+1: case -60*2: case -60*2-1: case -61*2:
-      case -89*2: case -89*2-1: case -90*2: case -90*2-1: case -91*2:
-      case -119*2: case -119*2-1: case -120*2: case -120*2-1: case -121*2:
-      case -149*2: case -149*2-1: case -150*2: case -150*2-1: case -151*2:
-      case -179*2: case -179*2-1: case -180*2: case -180*2-1: case -181*2:
-        x = (RADIUS-15) * cos(PI * angle / 180);
-        y = (RADIUS-15) * sin(PI * angle / 180);
-        rotate(&X1, &Y1, x, y);
-        horizon.drawLine(X0+XORG, Y0+YORG, X1+XORG, Y1+YORG, PWHITE);
-        break;
-    }
-  }
+  x = (RADIUS-5) * cos(PI * angle / 180);
+  y = (RADIUS-5) * sin(PI * angle / 180);
+  rotate(&X0, &Y0, x, y);
+  x = (RADIUS+5) * cos(PI * (angle-2) / 180);
+  y = (RADIUS+5) * sin(PI * (angle-2) / 180);
+  rotate(&X1, &Y1, x, y);
+  x = (RADIUS+5) * cos(PI * (angle+2) / 180);
+  y = (RADIUS+5) * sin(PI * (angle+2) / 180);
+  rotate(&X2, &Y2, x, y);
+  horizon.fillTriangle(X0+XORG, Y0+YORG, X1+XORG, Y1+YORG, X2+XORG, Y2+YORG, PWHITE);
+}
+
+void draw_Mark2(int angle)
+{
+  int x, y, X0, Y0, X1, Y1;
+
+  x = (RADIUS-5) * cos(PI * angle / 180);
+  y = (RADIUS-5) * sin(PI * angle / 180);
+  rotate(&X0, &Y0, x, y);
+  x = (RADIUS-15) * cos(PI * angle / 180);
+  y = (RADIUS-15) * sin(PI * angle / 180);
+  rotate(&X1, &Y1, x, y);
+  horizon.drawLine(X0+XORG, Y0+YORG, X1+XORG, Y1+YORG, PWHITE);
+}
+
+void draw_Mark3(int angle)
+{
+  int x, y, X0, Y0, X1, Y1, X2, Y2, X3, Y3;
+
+  x = (RADIUS- 5) * cos(PI * (angle +1) / 180);
+  y = (RADIUS- 5) * sin(PI * (angle +1) / 180);
+  rotate(&X0, &Y0, x, y);
+  x = (RADIUS-15) * cos(PI * (angle +1) / 180);
+  y = (RADIUS-15) * sin(PI * (angle +1) / 180);
+  rotate(&X1, &Y1, x, y);
+  x = (RADIUS- 5) * cos(PI * (angle -1) / 180);
+  y = (RADIUS- 5) * sin(PI * (angle -1) / 180);
+  rotate(&X2, &Y2, x, y);
+  x = (RADIUS-15) * cos(PI * (angle -1) / 180);
+  y = (RADIUS-15) * sin(PI * (angle -1) / 180);
+  rotate(&X3, &Y3, x, y);
+  horizon.fillTriangle(X0+XORG, Y0+YORG, X1+XORG, Y1+YORG, X2+XORG, Y2+YORG, PWHITE);
+  horizon.fillTriangle(X1+XORG, Y1+YORG, X2+XORG, Y2+YORG, X3+XORG, Y3+YORG, PWHITE);
+}
+
+void draw_Roll()
+{
+  horizon.drawArc(XORG, YORG, RADIUS-5, RADIUS-5, 180-roll, -roll, PWHITE);
+
+  draw_Mark1(-45);
+  draw_Mark1(-135);
+
+  draw_Mark2(-70);
+  draw_Mark2(-80);
+  draw_Mark2(-100);
+  draw_Mark2(-110);
+
+  draw_Mark3(0);
+  draw_Mark3(-30);
+  draw_Mark3(-60);
+  draw_Mark3(-90);
+  draw_Mark3(-120);
+  draw_Mark3(-150);
+  draw_Mark3(-180);
 }
 
 void draw_Bezel()
