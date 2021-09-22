@@ -16,20 +16,21 @@ static LGFX_Sprite variometer(&horizon);
 static LGFX_Sprite heading(&horizon);
 static LGFX_Sprite gspeed(&horizon);
 
-#define XORG 160
-#define YORG 120
+#define XORG  160
+#define YORG  120
 #define PITCH 220
 
-#define PBLACK 0
-#define PSKY 1
-#define PGND 2
+#define PBLACK  0
+#define PSKY    1
+#define PGND    2
 #define PNEEDLE 3
-#define PWHITE 255
+#define PWHITE  255
 
 uint8_t displayOption;
 uint8_t debugOption;
 uint16_t gpsValidCount;
 uint16_t fps;
+uint16_t debugCount;
 
 float pitch, pitch0;
 float roll, roll0;
@@ -38,6 +39,25 @@ float Sin, Cos, Psin;
 
 float altitude;
 float climbRate;
+
+void Btn()
+{
+  M5.update();
+  if(M5.BtnC.wasPressed()){
+    IMUReset();
+  }
+  else if(M5.BtnB.wasPressed()){
+    ++debugOption %= 3;
+    if(debugOption == 2){
+      lcd.clear();
+      lcd.setCursor(0, 0);
+      debugCount = 0;
+    }
+  }
+  else if(M5.BtnA.wasPressed()){
+    ++displayOption %= 2;
+  }
+}
 
 void Imu()
 {
@@ -117,22 +137,8 @@ void gpsMonitor()
 
 void rotate(int *X, int *Y, int x, int y)
 {
-  *X = x*Cos - y*Sin;
-  *Y = x*Sin + y*Cos;
-}
-
-void Btn()
-{
-  M5.update();
-  if(M5.BtnC.wasPressed()){
-    IMUReset();
-  }
-  else if(M5.BtnB.wasPressed()){
-    ++debugOption %= 2;
-  }
-  else if(M5.BtnA.wasPressed()){
-    ++displayOption %= 2;
-  }
+  *X = x * Cos - y * Sin;
+  *Y = x * Sin + y * Cos;
 }
 
 uint8_t Zero[] = {
@@ -195,19 +201,19 @@ uint8_t Three[] = {
   0,1,1,1,1,1,0,0,
 };
 
-void draw_Char(int x0, int y0, uint8_t c[])
+void draw_Char(int x, int y, uint8_t c[])
 {
   int ix, iy, X, Y;
   int p = PITCH * Psin;
 
-  if(y0+7+p < -90 || y0+7+p > 90)
+  if(y+7+p < -90 || y+7+p > 90)
     return;
 
   for(iy = 0; iy < 12; iy++){
     for(ix = 0; ix < 8; ix++){
-      if(c[iy * 8 + ix] != 0){
-        rotate(&X, &Y, ix+x0, iy+PITCH*Psin+y0);
-        horizon.drawPixel(X+XORG, Y+YORG, PWHITE);
+      if(c[iy*8+ix] != 0){
+        rotate(&X, &Y, x+ix, y+iy+p);
+        horizon.drawPixel(XORG+X, YORG+Y, PWHITE);
       }
     }
   }
@@ -224,7 +230,7 @@ void draw_Line(int y, int len)
 
   rotate(&X0, &Y0, -len/2, y+p);
   rotate(&X1, &Y1,  len/2, y+p);
-  horizon.drawLine(X0+XORG, Y0+YORG, X1+XORG, Y1+YORG, PWHITE);
+  horizon.drawLine(XORG+X0, YORG+Y0, XORG+X1, YORG+Y1, PWHITE);
 }
 
 #define PX1 32
@@ -243,51 +249,57 @@ void draw_Line(int y, int len)
 
 void draw_Pitch()
 {
-  draw_Line(        -PY6, PL2);
   draw_Char( PX1  ,  PY6-6, Three);
   draw_Char( PX2  ,  PY6-6, Zero);
+  draw_Line(         PY6, PL2);
   draw_Char(-PX2-8,  PY6-6, Three);
   draw_Char(-PX1-8,  PY6-6, Zero);
-  draw_Line(        -PY5, PL1);
-
-  draw_Line(        -PY4, PL2);
-  draw_Char( PX1,    PY4-6, Two);
-  draw_Char( PX2,    PY4-6, Zero);
-  draw_Char(-PX2-8,  PY4-6, Two);
-  draw_Char(-PX1-8,  PY4-6, Zero);
-  draw_Line(        -PY3, PL1);
-
-  draw_Line(        -PY2, PL2);
-  draw_Char( PX1,    PY2-6, One);
-  draw_Char( PX2,    PY2-6, Zero);
-  draw_Char(-PX2-8,  PY2-6, One);
-  draw_Char(-PX1-8,  PY2-6, Zero);
-  draw_Line(        -PY1, PL1);
-
-  draw_Line(    0, PL2);
-  draw_Char( PX1,    PY0-6, Zero);
-  draw_Char(-PX1-8,  PY0-6, Zero);
-
-  draw_Line(         PY1, PL1);
-  draw_Char( PX1,   -PY2-6, One);
-  draw_Char( PX2,   -PY2-6, Zero);
-  draw_Char(-PX2-8, -PY2-6, One);
-  draw_Char(-PX1-8, -PY2-6, Zero);
-  draw_Line(         PY2, PL2);
-
-  draw_Line(         PY3, PL1);
-  draw_Char( PX1,   -PY4-6, Two);
-  draw_Char( PX2,   -PY4-6, Zero);
-  draw_Char(-PX2-8, -PY4-6, Two);
-  draw_Char(-PX1-8, -PY4-6, Zero);
-  draw_Line(         PY4, PL2);
 
   draw_Line(         PY5, PL1);
+
+  draw_Char( PX1,    PY4-6, Two);
+  draw_Char( PX2,    PY4-6, Zero);
+  draw_Line(         PY4, PL2);
+  draw_Char(-PX2-8,  PY4-6, Two);
+  draw_Char(-PX1-8,  PY4-6, Zero);
+
+  draw_Line(         PY3, PL1);
+
+  draw_Char( PX1,    PY2-6, One);
+  draw_Char( PX2,    PY2-6, Zero);
+  draw_Line(         PY2, PL2);
+  draw_Char(-PX2-8,  PY2-6, One);
+  draw_Char(-PX1-8,  PY2-6, Zero);
+
+  draw_Line(         PY1, PL1);
+
+  draw_Char( PX1,    PY0-6, Zero);
+  draw_Line(         0, PL2);
+  draw_Char(-PX1-8,  PY0-6, Zero);
+
+  draw_Line(        -PY1, PL1);
+
+  draw_Char( PX1,   -PY2-6, One);
+  draw_Char( PX2,   -PY2-6, Zero);
+  draw_Line(        -PY2, PL2);
+  draw_Char(-PX2-8, -PY2-6, One);
+  draw_Char(-PX1-8, -PY2-6, Zero);
+
+  draw_Line(        -PY3, PL1);
+
+  draw_Char( PX1,   -PY4-6, Two);
+  draw_Char( PX2,   -PY4-6, Zero);
+  draw_Line(        -PY4, PL2);
+  draw_Char(-PX2-8, -PY4-6, Two);
+  draw_Char(-PX1-8, -PY4-6, Zero);
+
+  draw_Line(        -PY5, PL1);
+
   draw_Char( PX1,   -PY6-6, Three);
   draw_Char( PX2,   -PY6-6, Zero);
+  draw_Line(        -PY6, PL2);
   draw_Char(-PX2-8, -PY6-6, Three);
   draw_Char(-PX1-8, -PY6-6, Zero);
-  draw_Line(         PY6, PL2);
 }
 
 #define RADIUS 120
@@ -296,54 +308,54 @@ void draw_Mark1(int angle)
 {
   int x, y, X0, Y0, X1, Y1, X2, Y2;
 
-  x = (RADIUS-5) * cos(PI * angle / 180);
-  y = (RADIUS-5) * sin(PI * angle / 180);
+  x = (RADIUS-13) * cos(PI * angle / 180);
+  y = (RADIUS-13) * sin(PI * angle / 180);
   rotate(&X0, &Y0, x, y);
-  x = (RADIUS+5) * cos(PI * (angle-2) / 180);
-  y = (RADIUS+5) * sin(PI * (angle-2) / 180);
+  x = (RADIUS -5) * cos(PI * (angle-2) / 180);
+  y = (RADIUS -5) * sin(PI * (angle-2) / 180);
   rotate(&X1, &Y1, x, y);
-  x = (RADIUS+5) * cos(PI * (angle+2) / 180);
-  y = (RADIUS+5) * sin(PI * (angle+2) / 180);
+  x = (RADIUS -5) * cos(PI * (angle+2) / 180);
+  y = (RADIUS -5) * sin(PI * (angle+2) / 180);
   rotate(&X2, &Y2, x, y);
-  horizon.fillTriangle(X0+XORG, Y0+YORG, X1+XORG, Y1+YORG, X2+XORG, Y2+YORG, PWHITE);
+  horizon.fillTriangle(XORG+X0, YORG+Y0, XORG+X1, YORG+Y1, XORG+X2, Y2+YORG, PWHITE);
 }
 
 void draw_Mark2(int angle)
 {
   int x, y, X0, Y0, X1, Y1;
 
-  x = (RADIUS-5) * cos(PI * angle / 180);
-  y = (RADIUS-5) * sin(PI * angle / 180);
+  x = (RADIUS -5) * cos(PI * angle / 180);
+  y = (RADIUS -5) * sin(PI * angle / 180);
   rotate(&X0, &Y0, x, y);
-  x = (RADIUS-15) * cos(PI * angle / 180);
-  y = (RADIUS-15) * sin(PI * angle / 180);
+  x = (RADIUS-14) * cos(PI * angle / 180);
+  y = (RADIUS-14) * sin(PI * angle / 180);
   rotate(&X1, &Y1, x, y);
-  horizon.drawLine(X0+XORG, Y0+YORG, X1+XORG, Y1+YORG, PWHITE);
+  horizon.drawLine(XORG+X0, YORG+Y0, XORG+X1, YORG+Y1, PWHITE);
 }
 
 void draw_Mark3(int angle)
 {
   int x, y, X0, Y0, X1, Y1, X2, Y2, X3, Y3;
 
-  x = (RADIUS- 5) * cos(PI * (angle +1) / 180);
-  y = (RADIUS- 5) * sin(PI * (angle +1) / 180);
+  x = (RADIUS -5) * cos(PI * (angle+1) / 180);
+  y = (RADIUS -5) * sin(PI * (angle+1) / 180);
   rotate(&X0, &Y0, x, y);
-  x = (RADIUS-15) * cos(PI * (angle +1) / 180);
-  y = (RADIUS-15) * sin(PI * (angle +1) / 180);
+  x = (RADIUS-14) * cos(PI * (angle+1) / 180);
+  y = (RADIUS-14) * sin(PI * (angle+1) / 180);
   rotate(&X1, &Y1, x, y);
-  x = (RADIUS- 5) * cos(PI * (angle -1) / 180);
-  y = (RADIUS- 5) * sin(PI * (angle -1) / 180);
+  x = (RADIUS -5) * cos(PI * (angle-1) / 180);
+  y = (RADIUS -5) * sin(PI * (angle-1) / 180);
   rotate(&X2, &Y2, x, y);
-  x = (RADIUS-15) * cos(PI * (angle -1) / 180);
-  y = (RADIUS-15) * sin(PI * (angle -1) / 180);
+  x = (RADIUS-14) * cos(PI * (angle-1) / 180);
+  y = (RADIUS-14) * sin(PI * (angle-1) / 180);
   rotate(&X3, &Y3, x, y);
-  horizon.fillTriangle(X0+XORG, Y0+YORG, X1+XORG, Y1+YORG, X2+XORG, Y2+YORG, PWHITE);
-  horizon.fillTriangle(X1+XORG, Y1+YORG, X2+XORG, Y2+YORG, X3+XORG, Y3+YORG, PWHITE);
+  horizon.fillTriangle(XORG+X0, YORG+Y0, XORG+X1, YORG+Y1, XORG+X2, YORG+Y2, PWHITE);
+  horizon.fillTriangle(XORG+X1, YORG+Y1, XORG+X2, YORG+Y2, XORG+X3, YORG+Y3, PWHITE);
 }
 
 void draw_Roll()
 {
-  horizon.drawArc(XORG, YORG, RADIUS-5, RADIUS-5, 180-roll, -roll, PWHITE);
+  horizon.drawArc(XORG, YORG, RADIUS-15, RADIUS-15, 180-roll, -roll, PWHITE);
 
   draw_Mark1(-45);
   draw_Mark1(-135);
@@ -364,22 +376,22 @@ void draw_Roll()
 
 void draw_Bezel()
 {
-  horizon.fillTriangle(0+XORG, -105+YORG, -10+XORG, -85+YORG, 10+XORG, -85+YORG, PBLACK);
-  horizon.drawTriangle(0+XORG, -105+YORG, -10+XORG, -85+YORG, 10+XORG, -85+YORG, PWHITE);
+  horizon.fillTriangle(XORG+0, YORG-105, XORG-10, YORG-85, XORG+10, YORG-85, PBLACK);
+  horizon.drawTriangle(XORG+0, YORG-105, XORG-10, YORG-85, XORG+10, YORG-85, PWHITE);
 
-  horizon.fillRect(-69+XORG, -4+YORG, 50, 8, PBLACK);
-  horizon.drawRect(-69+XORG, -4+YORG, 50, 8, PWHITE);
-  horizon.fillRect( 20+XORG, -4+YORG, 50, 8, PBLACK);
-  horizon.drawRect( 20+XORG, -4+YORG, 50, 8, PWHITE);
+  horizon.fillRect(XORG-69, YORG-4, 50, 8, PBLACK);
+  horizon.drawRect(XORG-69, YORG-4, 50, 8, PWHITE);
+  horizon.fillRect(XORG+20, YORG-4, 50, 8, PBLACK);
+  horizon.drawRect(XORG+20, YORG-4, 50, 8, PWHITE);
 
-  horizon.fillTriangle(-20+XORG, -4+YORG, 0+XORG, 16+YORG, -20+XORG,  4+YORG, PBLACK);
-  horizon.fillTriangle(-20+XORG,  4+YORG, 0+XORG, 16+YORG,   0+XORG, 24+YORG, PBLACK);
-  horizon.drawLine(-20+XORG, -4+YORG, 0+XORG, 16+YORG, PWHITE);
-  horizon.drawLine(-20+XORG,  4+YORG, 0+XORG, 24+YORG, PWHITE);
-  horizon.fillTriangle( 20+XORG, -4+YORG, 0+XORG, 16+YORG,  20+XORG,  4+YORG, PBLACK);
-  horizon.fillTriangle( 20+XORG,  4+YORG, 0+XORG, 16+YORG,   0+XORG, 24+YORG, PBLACK);
-  horizon.drawLine( 20+XORG, -4+YORG, 0+XORG, 16+YORG, PWHITE);
-  horizon.drawLine( 20+XORG,  4+YORG, 0+XORG, 24+YORG, PWHITE);
+  horizon.fillTriangle(XORG-20, YORG-4, XORG+0, YORG+16, XORG-20, YORG+ 4, PBLACK);
+  horizon.fillTriangle(XORG-20, YORG+4, XORG+0, YORG+16, XORG+ 0, YORG+24, PBLACK);
+  horizon.drawLine(XORG-20, YORG-4, XORG+0, YORG+16, PWHITE);
+  horizon.drawLine(XORG-20, YORG+4, XORG+0, YORG+24, PWHITE);
+  horizon.fillTriangle(XORG+20, YORG-4, XORG+0, YORG+16, XORG+20, YORG+ 4, PBLACK);
+  horizon.fillTriangle(XORG+20, YORG+4, XORG+0, YORG+16, XORG+ 0, YORG+24, PBLACK);
+  horizon.drawLine(XORG+20, YORG-4, XORG+0, YORG+16, PWHITE);
+  horizon.drawLine(XORG+20, YORG+4, XORG+0, YORG+24, PWHITE);
 }
 
 void draw_BackPlate()
@@ -397,7 +409,7 @@ void draw_BackPlate()
   rotate(&X0, &Y0, x0, y0);
   rotate(&X1, &Y1, x1, y1);
   rotate(&X2, &Y2, x2, y2);
-  horizon.fillTriangle(X0+XORG, Y0+P+YORG, X1+XORG, Y1+P+YORG, X2+XORG, Y2+P+YORG, PSKY);
+  horizon.fillTriangle(XORG+X0, Y0+P+YORG, XORG+X1, Y1+P+YORG, XORG+X2, Y2+P+YORG, PSKY);
   if(debugOption == 1){
     horizon.setTextSize(2);
     horizon.setTextColor(PWHITE);
@@ -551,6 +563,16 @@ void Draw_All()
   horizon.pushSprite(0, 0);
 }
 
+void Terminal()
+{
+  if(debugCount > 26*15)      // size(2):12*26=312(<320) 16*15=240
+    return;
+  while (Serial2.available()){
+    lcd.printf("%c", Serial2.read());
+    debugCount++;
+  }
+}
+
 void setup(void)
 {
   M5.begin();
@@ -566,8 +588,6 @@ void setup(void)
     delay(10);
   }
   IMUReset();
-
-  M5.Lcd.setTextSize(2);
 
   lcd.init();
   lcd.setRotation(1);
@@ -609,12 +629,22 @@ void loop(void)
 {
   static int start, count;
 
-  Gps();
-  Imu();
   Btn();
-  Draw_All();
-  if(debugOption == 1)
+  if(debugOption == 0){
+    Gps();
+    Imu();
+    Draw_All();
+  }
+  else if(debugOption == 1){
+    Gps();
+    Imu();
+    Draw_All();
     gpsMonitor();
+  }
+  else if(debugOption == 2){
+    Terminal();
+  }
+
   if(millis() - start > 1000){
     fps = count;
     count = 0;
