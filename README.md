@@ -10,6 +10,6 @@
 
 Possible Combination  
 M5Stack Fire + External GPS Unit (e.g. GYSFDMAXB, AE-GYSFDMAXB akizuki-denshi)  
-M5Stack Grey + PLUS Module Encoder Module + External GPS Unit
+M5Stack Grey + PLUS Module Encoder Module + External GPS Unit  
 M5Stack Fire + GPS Module u-blox NEO-M8N  
 M5Stack Grey + GPS Module u-blox NEO-M8N  
