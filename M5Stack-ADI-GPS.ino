@@ -578,7 +578,7 @@ void setup(void)
   M5.begin();
   Wire.begin();
   M5.Power.begin();
-  M5.Power.setPowerBoostSet(true);
+//  M5.Power.setPowerBoostSet(true);
   Serial2.begin(9600, SERIAL_8N1, 16, 17);
 
   M5.IMU.Init();
